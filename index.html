@@ -128,44 +128,67 @@
         alert("Please enter a URL, cutie! :3");
         return;
       }
-      
+
+      // Clear previous response
       document.getElementById('responseSection').style.display = "none";
       document.querySelector('#headersTable tbody').innerHTML = "";
       document.getElementById('responseBody').textContent = "";
-      
+
       const headers = {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'User-Agent': 'MyFetchBot/1.0 (owo)'
       };
 
-      // Use a proxy for non-GitHub pages to avoid CORS issues
-      let fetchUrl = url;
-      if (!url.includes("github.io")) {
-        fetchUrl = "https://corsproxy.io/?" + encodeURIComponent(url);
+      function fetchDirectly(fetchUrl) {
+        fetch(fetchUrl, { method: 'GET', headers: headers })
+          .then(response => {
+            const tbody = document.querySelector('#headersTable tbody');
+            for (const [key, value] of response.headers.entries()) {
+              const row = document.createElement('tr');
+              const cellKey = document.createElement('td');
+              const cellValue = document.createElement('td');
+              cellKey.textContent = key;
+              cellValue.textContent = value;
+              row.appendChild(cellKey);
+              row.appendChild(cellValue);
+              tbody.appendChild(row);
+            }
+            return response.text();
+          })
+          .then(text => {
+            document.getElementById('responseBody').textContent = text;
+            document.getElementById('responseSection').style.display = "block";
+          })
+          .catch(error => {
+            alert("Oopsies, something went wrong! " + error);
+          });
       }
 
-      fetch(fetchUrl, { method: 'GET', headers: headers })
-        .then(response => {
-          const tbody = document.querySelector('#headersTable tbody');
-          response.headers.forEach((value, key) => {
+      if (url.includes("github.io")) {
+        fetchDirectly(url);
+      } else {
+        // Use proxy to bypass CORS issues
+        const proxyUrl = "https://api.allorigins.hexocode.repl.co/get?disableCache=true&url=" + encodeURIComponent(url);
+        fetch(proxyUrl, { method: 'GET', headers: headers })
+          .then(response => response.json())
+          .then(data => {
+            const tbody = document.querySelector('#headersTable tbody');
             const row = document.createElement('tr');
             const cellKey = document.createElement('td');
+            cellKey.textContent = "Info";
             const cellValue = document.createElement('td');
-            cellKey.textContent = key;
-            cellValue.textContent = value;
+            cellValue.textContent = "Headers not available when using proxy.";
             row.appendChild(cellKey);
             row.appendChild(cellValue);
             tbody.appendChild(row);
+
+            document.getElementById('responseBody').textContent = data.contents;
+            document.getElementById('responseSection').style.display = "block";
+          })
+          .catch(error => {
+            alert("Oopsies, something went wrong! " + error);
           });
-          return response.text();
-        })
-        .then(text => {
-          document.getElementById('responseBody').textContent = text;
-          document.getElementById('responseSection').style.display = "block";
-        })
-        .catch(error => {
-          alert("Oopsies, something went wrong! " + error);
-        });
+      }
     }
   </script>
 </body>
