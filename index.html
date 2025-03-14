@@ -115,7 +115,7 @@
           </tr>
         </thead>
         <tbody>
-          <!-- hedderz inzsrt heer -->
+          <!-- Headers will be inserted here -->
         </tbody>
       </table>
       <h2>Response Body</h2>
@@ -131,22 +131,23 @@
         return;
       }
       
-      // expunge previous result.
+      // Clear previous result.
       document.getElementById('responseSection').style.display = "none";
       document.querySelector('#headersTable tbody').innerHTML = "";
       document.getElementById('responseBody').textContent = "";
       
-      // auto headers
+      // Auto headers
       const headers = {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'User-Agent': 'MyFetchBot/1.0 (owo)'
       };
       
-      fetch(url, { method: 'GET', headers: headers })
-        .then(response => {
-          // make a table
-          const tbody = document.querySelector('#headersTable tbody');
-          response.headers.forEach((value, key) => {
+      // If the URL includes "github.io", do a direct fetch; otherwise, use a CORS proxy to avoid errors!
+      if (url.includes("github.io")) {
+        fetch(url, { method: 'GET', headers: headers })
+          .then(response => {
+            const tbody = document.querySelector('#headersTable tbody');
+            response.headers.forEach((value, key) => {
               const row = document.createElement('tr');
               const cellKey = document.createElement('td');
               const cellValue = document.createElement('td');
@@ -155,16 +156,40 @@
               row.appendChild(cellKey);
               row.appendChild(cellValue);
               tbody.appendChild(row);
+            });
+            return response.text();
+          })
+          .then(text => {
+            document.getElementById('responseBody').textContent = text;
+            document.getElementById('responseSection').style.display = "block";
+          })
+          .catch(error => {
+            alert("Oopsies, something went wrong! " + error);
           });
-          return response.text();
-        })
-        .then(text => {
-          document.getElementById('responseBody').textContent = text;
-          document.getElementById('responseSection').style.display = "block";
-        })
-        .catch(error => {
-          alert("Oopsies, something went wrong! " + error);
-        });
+      } else {
+        // Use AllOrigins proxy to bypass CORS restrictions on non-github.io websites
+        const proxyUrl = "https://api.allorigins.hexocode.repl.co/get?disableCache=true&url=" + encodeURIComponent(url);
+        fetch(proxyUrl, { method: 'GET', headers: headers })
+          .then(response => response.json())
+          .then(data => {
+            // Since the proxy doesn't relay header info, show a note instead
+            const tbody = document.querySelector('#headersTable tbody');
+            const row = document.createElement('tr');
+            const cellKey = document.createElement('td');
+            cellKey.textContent = "Info";
+            const cellValue = document.createElement('td');
+            cellValue.textContent = "Headers not available when using proxy.";
+            row.appendChild(cellKey);
+            row.appendChild(cellValue);
+            tbody.appendChild(row);
+            
+            document.getElementById('responseBody').textContent = data.contents;
+            document.getElementById('responseSection').style.display = "block";
+          })
+          .catch(error => {
+            alert("Oopsies, something went wrong! " + error);
+          });
+      }
     }
   </script>
 </body>
